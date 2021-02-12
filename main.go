@@ -12,25 +12,26 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var pool chan []byte = make(chan []byte)
+var pool []*websocket.Conn = make([]*websocket.Conn, 0)
 
 func reader(conn *websocket.Conn) {
-	// go read from channel
-	go func() {
-		for v := range pool {
-			conn.WriteMessage(1, v)
-		}
-	}()
+	// subscribe to pool
+	pool = append(pool, conn)
 	// write from websocket
 	for {
-		_, p, err := conn.ReadMessage()
+		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		log.Println(string(p))
-		pool <- p
-
+		for _, c := range pool {
+			go func(c *websocket.Conn) {
+				if err := c.WriteMessage(messageType, p); err != nil {
+					log.Println(err)
+				}
+			}(c)
+		}
 	}
 }
 
