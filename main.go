@@ -16,6 +16,7 @@ var pool []*websocket.Conn = make([]*websocket.Conn, 0)
 
 func reader(conn *websocket.Conn) {
 	// subscribe to pool
+	i := len(pool)
 	pool = append(pool, conn)
 	// write from websocket
 	for {
@@ -25,7 +26,10 @@ func reader(conn *websocket.Conn) {
 			return
 		}
 		log.Println(string(p))
-		for _, c := range pool {
+		for next_i, c := range pool {
+			if next_i == i {
+				continue
+			}
 			go func(c *websocket.Conn) {
 				if err := c.WriteMessage(messageType, p); err != nil {
 					log.Println(err)
