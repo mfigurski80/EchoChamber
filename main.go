@@ -51,7 +51,12 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	reader(ws)
 }
 
+func mainEndpoint(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello! This is a websocket echo server for Rohan's project"))
+}
+
 func main() {
+	http.HandleFunc("/", mainEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
