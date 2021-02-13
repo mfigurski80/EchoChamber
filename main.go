@@ -59,5 +59,5 @@ func main() {
 	http.HandleFunc("/", mainEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServeTLS(":8080", "./certificates/Certification.crt", "./certificates/Key.key", nil))
 }
