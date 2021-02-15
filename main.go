@@ -13,12 +13,14 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var pool []*websocket.Conn = make([]*websocket.Conn, 0)
+type Pool []*websocket.Conn
 
-func reader(conn *websocket.Conn) {
+var rooms map[string]Pool = make(map[string]Pool, 0)
+
+func reader(rm string, conn *websocket.Conn) {
 	// subscribe to pool
-	i := len(pool)
-	pool = append(pool, conn)
+	i := len(rooms[rm])
+	rooms[rm] = append(rooms[rm], conn)
 	// write from websocket
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -27,7 +29,7 @@ func reader(conn *websocket.Conn) {
 			break // this where checking close?
 		}
 		log.Println(string(p))
-		for next_i, c := range pool {
+		for next_i, c := range rooms[rm] {
 			if next_i == i {
 				continue
 			}
@@ -37,11 +39,18 @@ func reader(conn *websocket.Conn) {
 		}
 	}
 	// remove from pool
-	pool = append(pool[:i], pool[i+1:]...)
+	rooms[rm] = append(rooms[rm][:i], rooms[rm][i+1:]...)
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+
+	var room string
+	queryRoom, ok := r.URL.Query()["room"]
+	if !ok || len(queryRoom) == 0 {
+		room = ""
+	}
+	room = queryRoom[0]
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -49,7 +58,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("client connected")
-	reader(ws)
+	reader(room, ws)
 }
 
 func mainEndpoint(w http.ResponseWriter, r *http.Request) {
