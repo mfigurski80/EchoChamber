@@ -40,6 +40,9 @@ func reader(rm string, conn *websocket.Conn) {
 	}
 	// remove from pool
 	rooms[rm] = append(rooms[rm][:i], rooms[rm][i+1:]...)
+	if len(rooms[rm]) == 0 {
+		delete(rooms, rm)
+	}
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
