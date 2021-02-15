@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/websocket"
 )
@@ -23,20 +24,20 @@ func reader(conn *websocket.Conn) {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
-			return
+			break // this where checking close?
 		}
 		log.Println(string(p))
 		for next_i, c := range pool {
 			if next_i == i {
 				continue
 			}
-			go func(c *websocket.Conn) {
-				if err := c.WriteMessage(messageType, p); err != nil {
-					log.Println(err)
-				}
-			}(c)
+			if err := c.WriteMessage(messageType, p); err != nil {
+				log.Println(err)
+			}
 		}
 	}
+	// remove from pool
+	pool = append(pool[:i], pool[i+1:]...)
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +48,7 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	log.Println("Client Connected...")
+	log.Println("client connected")
 	reader(ws)
 }
 
@@ -56,8 +57,10 @@ func mainEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	dir, _ := os.Getwd()
+	log.Println(dir)
 	http.HandleFunc("/", mainEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
-	log.Fatal(http.ListenAndServeTLS(":8080", "./certificates/Certification.crt", "./certificates/Key.key", nil))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
