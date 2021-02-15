@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -45,6 +46,22 @@ func reader(rm string, conn *websocket.Conn) {
 	}
 }
 
+type ResponseRooms struct {
+	Name  string `json:"name"`
+	Count int    `json:"count"`
+}
+
+func pollEndpoint(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	list := make([]ResponseRooms, len(rooms))
+	next := 0
+	for k, v := range rooms {
+		list[next] = ResponseRooms{k, len(v)}
+		next++
+	}
+	json.NewEncoder(w).Encode(list)
+}
+
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
@@ -52,8 +69,9 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	queryRoom, ok := r.URL.Query()["room"]
 	if !ok || len(queryRoom) == 0 {
 		room = ""
+	} else {
+		room = queryRoom[0]
 	}
-	room = queryRoom[0]
 
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -72,6 +90,7 @@ func main() {
 	dir, _ := os.Getwd()
 	log.Println(dir)
 	http.HandleFunc("/", mainEndpoint)
+	http.HandleFunc("/poll", pollEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
