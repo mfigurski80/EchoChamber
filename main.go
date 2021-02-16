@@ -14,24 +14,24 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type Pool []*websocket.Conn
+type Room map[string]*websocket.Conn
 
-var rooms map[string]Pool = make(map[string]Pool, 0)
+var rooms map[string]Room = make(map[string]Room, 0)
 
 func reader(rm string, conn *websocket.Conn) {
 	// subscribe to pool
-	i := len(rooms[rm])
-	rooms[rm] = append(rooms[rm], conn)
-	// write from websocket
+	uuid, _ := makeUUID()
+	rooms[rm][uuid] = conn
+	// write to pool from websocket
 	for {
 		messageType, p, err := conn.ReadMessage()
 		if err != nil {
 			log.Println(err)
-			break // this where checking close?
+			break // connection closed
 		}
 		log.Println(string(p))
-		for next_i, c := range rooms[rm] {
-			if next_i == i {
+		for k, c := range rooms[rm] {
+			if k == uuid {
 				continue
 			}
 			if err := c.WriteMessage(messageType, p); err != nil {
@@ -40,7 +40,7 @@ func reader(rm string, conn *websocket.Conn) {
 		}
 	}
 	// remove from pool
-	rooms[rm] = append(rooms[rm][:i], rooms[rm][i+1:]...)
+	delete(rooms[rm], uuid)
 	if len(rooms[rm]) == 0 {
 		delete(rooms, rm)
 	}
