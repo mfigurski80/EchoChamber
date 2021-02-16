@@ -9,6 +9,10 @@ import (
 func roomReader(rm string, conn *websocket.Conn) {
 	// subscribe to pool
 	uuid, _ := makeUUID()
+	if _, ok := rooms[rm]; !ok {
+		// new room? Init map
+		rooms[rm] = make(room, 0)
+	}
 	rooms[rm][uuid] = conn
 	// notify poll pool
 	notifyPollPool(rm, len(rooms[rm]))
