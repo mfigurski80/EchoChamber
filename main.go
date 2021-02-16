@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -14,57 +13,25 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type Room map[string]*websocket.Conn
+type room map[string]*websocket.Conn
 
-var rooms map[string]Room = make(map[string]Room, 0)
+var rooms = make(map[string]room, 0)
 
-func reader(rm string, conn *websocket.Conn) {
-	// subscribe to pool
-	uuid, _ := makeUUID()
-	rooms[rm][uuid] = conn
-	// write to pool from websocket
-	for {
-		messageType, p, err := conn.ReadMessage()
-		if err != nil {
-			log.Println(err)
-			break // connection closed
-		}
-		log.Println(string(p))
-		for k, c := range rooms[rm] {
-			if k == uuid {
-				continue
-			}
-			if err := c.WriteMessage(messageType, p); err != nil {
-				log.Println(err)
-			}
-		}
-	}
-	// remove from pool
-	delete(rooms[rm], uuid)
-	if len(rooms[rm]) == 0 {
-		delete(rooms, rm)
-	}
-}
-
-type ResponseRooms struct {
-	Name  string `json:"name"`
-	Count int    `json:"count"`
-}
+var poll = make(room, 0)
 
 func pollEndpoint(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "application/json")
-	list := make([]ResponseRooms, len(rooms))
-	next := 0
-	for k, v := range rooms {
-		list[next] = ResponseRooms{k, len(v)}
-		next++
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+	ws, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
 	}
-	json.NewEncoder(w).Encode(list)
+	pollReader(ws)
 }
 
 func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 
+	// get room url query
 	var room string
 	queryRoom, ok := r.URL.Query()["room"]
 	if !ok || len(queryRoom) == 0 {
@@ -78,8 +45,8 @@ func wsEndpoint(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	log.Println("client connected")
-	reader(room, ws)
+	log.Printf("client connected to room '%s'\n", room)
+	roomReader(room, ws)
 }
 
 func mainEndpoint(w http.ResponseWriter, r *http.Request) {
