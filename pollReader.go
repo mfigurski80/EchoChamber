@@ -20,14 +20,19 @@ func notifyPollPool(room string, newCount int) {
 	}
 }
 
-func pollReader(conn *websocket.Conn) {
-	// write all current rooms
+func makeRoomList() []responseRooms {
 	list := make([]responseRooms, len(rooms))
 	next := 0
 	for k, v := range rooms {
 		list[next] = responseRooms{k, len(v)}
 		next++
 	}
+	return list
+}
+
+func pollReader(conn *websocket.Conn) {
+	// write all current rooms
+	list := makeRoomList()
 	if err := conn.WriteJSON(list); err != nil {
 		log.Println(err)
 	}

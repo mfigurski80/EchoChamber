@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,11 @@ var rooms = make(map[string]room, 0)
 var poll = make(room, 0)
 
 func pollEndpoint(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(makeRoomList())
+}
+
+func wsPollEndpoint(w http.ResponseWriter, r *http.Request) {
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -58,6 +64,7 @@ func main() {
 	log.Println(dir)
 	http.HandleFunc("/", mainEndpoint)
 	http.HandleFunc("/poll", pollEndpoint)
+	http.HandleFunc("/poll/ws", wsPollEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

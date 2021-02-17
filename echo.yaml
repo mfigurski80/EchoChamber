@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: echo-chamber
-          image: mfigurski80/echo-chamber:cef262a
+          image: mfigurski80/echo-chamber:6fa912f
           ports:
             - containerPort: 8080
 ---
