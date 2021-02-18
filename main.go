@@ -67,5 +67,9 @@ func main() {
 	http.HandleFunc("/poll/ws", wsPollEndpoint)
 	http.HandleFunc("/ws", wsEndpoint)
 	log.Println("Serving on http://0.0.0.0:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServeTLS(
+		":8080",
+		"./certificates/CloudflareCertificate.crt",
+		"./certificates/CloudflareKey.key",
+		nil))
 }

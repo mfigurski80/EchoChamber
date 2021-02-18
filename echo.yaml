@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: echo-chamber
-          image: mfigurski80/echo-chamber:6fa912f
+          image: mfigurski80/echo-chamber:989817a
           ports:
             - containerPort: 8080
 ---
@@ -24,8 +24,5 @@ metadata:
 spec:
   selector:
     app: echo-chamber
-  type: LoadBalancer
   ports:
     - port: 8080
-      targetPort: 8080
-      nodePort: 30080
